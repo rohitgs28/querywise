@@ -7,6 +7,7 @@ pub struct AppConfig {
     pub anthropic_api_key: Option<String>,
     pub openai_api_key: Option<String>,
     pub ollama_url: Option<String>,
+    pub ollama_model: Option<String>,
     pub default_ai_provider: Option<String>,
 }
 

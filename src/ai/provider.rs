@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 pub enum AiProvider {
     Anthropic { api_key: String },
     OpenAi { api_key: String },
-    Ollama { url: String },
+    Ollama { url: String, model: String },
 }
 
 #[derive(Debug, Serialize)]
@@ -62,7 +62,12 @@ impl AiProvider {
                     .ollama_url
                     .clone()
                     .unwrap_or_else(|| "http://localhost:11434".to_string());
-                Ok(AiProvider::Ollama { url })
+                let model = config
+                    .ollama_model
+                    .clone()
+                    .or_else(|| std::env::var("OLLAMA_MODEL").ok())
+                    .unwrap_or_else(|| "llama3".to_string());
+                Ok(AiProvider::Ollama { url, model })
             }
             _ => Err(anyhow::anyhow!("Unknown AI provider: {}", provider)),
         }
@@ -108,6 +113,7 @@ impl AiProvider {
                     .trim()
                     .to_string())
             }
+
             AiProvider::OpenAi { api_key } => {
                 let client = reqwest::Client::new();
                 let body = serde_json::json!({
@@ -134,10 +140,11 @@ impl AiProvider {
                     .trim()
                     .to_string())
             }
-            AiProvider::Ollama { url } => {
+
+            AiProvider::Ollama { url, model } => {
                 let client = reqwest::Client::new();
                 let body = serde_json::json!({
-                    "model": "llama3",
+                    "model": model,
                     "stream": false,
                     "system": system,
                     "prompt": user_message
