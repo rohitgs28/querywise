@@ -26,6 +26,11 @@ struct Cli {
     /// AI provider: anthropic, openai, ollama (default: anthropic)
     #[arg(long, default_value = "anthropic")]
     ai_provider: String,
+
+    /// Model to use with AI provider (e.g., codellama, mistral, gpt-4o)
+    /// Overrides config.toml and environment variables.
+    #[arg(short, long)]
+    model: Option<String>,
 }
 
 #[tokio::main]
@@ -45,6 +50,11 @@ async fn main() -> Result<()> {
              querywise -f ./data.db"
         ));
     };
+
+    // If --model is passed, set it as env var so provider picks it up
+    if let Some(model) = &cli.model {
+        std::env::set_var("OLLAMA_MODEL", model);
+    }
 
     let mut app = App::new(conn_url, cli.ai_provider).await?;
 
