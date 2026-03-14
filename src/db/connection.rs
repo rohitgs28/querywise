@@ -3,6 +3,22 @@ use sqlx::any::{AnyPool, AnyRow, AnyPoolOptions};
 use sqlx::Row;
 use super::schema::{SchemaInfo, TableInfo, ColumnInfo};
 
+/// Sanitizes a SQL identifier to prevent injection attacks.
+/// Rejects names containing double quotes, null bytes, or backslashes
+/// which could break out of quoted identifier context.
+fn sanitize_identifier(name: &str) -> Result<String> {
+    if name.is_empty() {
+        return Err(anyhow::anyhow!("Empty identifier name"));
+    }
+    if name.contains('"') || name.contains('\0') || name.contains('\\') {
+        return Err(anyhow::anyhow!(
+            "Invalid identifier '{}': contains prohibited characters",
+            name
+        ));
+    }
+    Ok(format!("\"{}\""  , name))
+}
+
 pub struct Database {
     pool: AnyPool,
     pub db_type: String,
@@ -25,6 +41,7 @@ impl Database {
 
         let pool = AnyPoolOptions::new()
             .max_connections(5)
+            .acquire_timeout(std::time::Duration::from_secs(10))
             .connect(url)
             .await?;
 
@@ -110,10 +127,8 @@ impl Database {
             let table_name: String = row.try_get("table_name")?;
             let columns = self.get_postgres_columns(&table_name).await?;
 
-            let count_row: AnyRow = sqlx::query(&format!(
-                "SELECT COUNT(*)::text as cnt FROM \"{}\"",
-                table_name
-            ))
+            let count_row: AnyRow = let safe_name = sanitize_identifier(&table_name)?;
+            sqlx::query(&format!("SELECT COUNT(*)::text as cnt FROM {}", safe_name))
             .fetch_one(&self.pool)
             .await?;
             let count: String = count_row.try_get("cnt")?;
@@ -201,10 +216,8 @@ impl Database {
                 })
                 .collect();
 
-            let count_row: AnyRow = sqlx::query(&format!(
-                "SELECT CAST(COUNT(*) AS CHAR) as cnt FROM `{}`",
-                table_name
-            ))
+            let count_row: AnyRow = let safe_name = sanitize_identifier(&table_name)?;
+            sqlx::query(&format!("SELECT CAST(COUNT(*) AS CHAR) as cnt FROM {}", safe_name))
             .fetch_one(&self.pool)
             .await?;
             let count: String = count_row.try_get("cnt")?;
@@ -232,7 +245,10 @@ impl Database {
             let table_name: String = row.try_get("name")?;
 
             let col_rows: Vec<AnyRow> =
-                sqlx::query(&format!("PRAGMA table_info(\"{}\")", table_name))
+                let safe_name = sanitize_identifier(&table_name)?;
+
+            let col_rows: Vec<AnyRow> =
+                sqlx::query(&format!("PRAGMA table_info({})", safe_name))
                     .fetch_all(&self.pool)
                     .await?;
 
@@ -247,7 +263,7 @@ impl Database {
                 .collect();
 
             let count_row: AnyRow =
-                sqlx::query(&format!("SELECT COUNT(*) as cnt FROM \"{}\"", table_name))
+                sqlx::query(&format!("SELECT COUNT(*) as cnt FROM {}", safe_name))
                     .fetch_one(&self.pool)
                     .await?;
             let count: i64 = count_row.try_get("cnt").unwrap_or(0);
@@ -268,4 +284,22 @@ pub struct QueryResult {
     pub rows: Vec<Vec<String>>,
     pub row_count: usize,
     pub execution_time_ms: u64,
+}\n
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sanitize_identifier_valid() {
+        assert_eq!(sanitize_identifier("users").unwrap(), "\"users\"");
+        assert_eq!(sanitize_identifier("my_table").unwrap(), "\"my_table\"");
+    }
+
+    #[test]
+    fn test_sanitize_identifier_rejects_injection() {
+        assert!(sanitize_identifier("").is_err());
+        assert!(sanitize_identifier("users\"; DROP TABLE").is_err());
+        assert!(sanitize_identifier("users\0evil").is_err());
+        assert!(sanitize_identifier("users\\evil").is_err());
+    }
 }
