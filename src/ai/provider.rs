@@ -33,6 +33,14 @@ struct ContentBlock {
     text: Option<String>,
 }
 
+/// Build a reqwest client with sensible timeouts to prevent hanging.
+fn http_client() -> Result<reqwest::Client> {
+    Ok(reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30))
+        .connect_timeout(std::time::Duration::from_secs(5))
+        .build()?)
+}
+
 impl AiProvider {
     pub fn from_config(provider: &str, config: &crate::config::AppConfig) -> Result<Self> {
         match provider {
@@ -76,7 +84,7 @@ impl AiProvider {
     pub async fn generate(&self, system: &str, user_message: &str) -> Result<String> {
         match self {
             AiProvider::Anthropic { api_key } => {
-                let client = reqwest::Client::new();
+                let client = http_client()?;
                 let body = AnthropicRequest {
                     model: "claude-sonnet-4-20250514".to_string(),
                     max_tokens: 2048,
@@ -115,7 +123,7 @@ impl AiProvider {
             }
 
             AiProvider::OpenAi { api_key } => {
-                let client = reqwest::Client::new();
+                let client = http_client()?;
                 let body = serde_json::json!({
                     "model": "gpt-4o",
                     "temperature": 0.0,
@@ -142,7 +150,7 @@ impl AiProvider {
             }
 
             AiProvider::Ollama { url, model } => {
-                let client = reqwest::Client::new();
+                let client = http_client()?;
                 let body = serde_json::json!({
                     "model": model,
                     "stream": false,
