@@ -1,138 +1,210 @@
-# querywise â¡
-
-> Talk to your database like a human. Get SQL back like a pro.
-
-```
-$ querywise "show me all users who signed up last week and haven't logged in since"
-â SELECT * FROM users WHERE created_at >= NOW() - INTERVAL 7 DAY AND last_login < NOW() - INTERVAL 7 DAY;
-â Executed in 3ms â 42 rows returned
-```
-
-**querywise** is an AI-powered database query generator and executor built in Rust. You write plain English, it writes the SQL, runs it, and shows you the results â all from your terminal.
-
-No more context-switching to StackOverflow. No more forgetting JOIN syntax at 2am.
+<p align="center">
+  <h1 align="center">QueryWise</h1>
+  <p align="center">
+    <strong>Talk to your database in plain English. Get SQL back in milliseconds.</strong>
+  </p>
+  <p align="center">
+    <a href="https://github.com/rohitgs28/querywise/actions"><img src="https://github.com/rohitgs28/querywise/workflows/CI/badge.svg" alt="CI"></a>
+    <a href="https://github.com/rohitgs28/querywise/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
+    <a href="https://github.com/rohitgs28/querywise"><img src="https://img.shields.io/badge/built_with-Rust-dea584.svg" alt="Built with Rust"></a>
+    <a href="https://ratatui.rs"><img src="https://img.shields.io/badge/Built_With_Ratatui-000?logo=ratatui&logoColor=fff" alt="Built with Ratatui"></a>
+  </p>
+</p>
 
 ---
+
+QueryWise is an AI-powered terminal database client built in Rust. You type natural language questions, it generates SQL, executes it, and shows results. When a query fails, it auto-fixes and retries. No browser, no GUI, no context switching.
+
+```
+$ querywise -f mydb.sqlite
+
+> show me users who signed up this week but never placed an order
+
+  SQL: SELECT u.* FROM users u
+       LEFT JOIN orders o ON u.id = o.user_id
+       WHERE u.created_at >= date('now', '-7 days')
+       AND o.id IS NULL;
+
+  ✓ 12 rows in 3ms
+```
+
+## Why QueryWise
+
+Most database tools assume you already know the exact SQL. QueryWise doesn't. Describe what you want in plain English, and it writes the query, runs it, and shows the results. If the generated query fails, it reads the error, rewrites the SQL, and retries automatically.
+
+No other terminal database client does this.
+
+| Feature | QueryWise | pgcli | usql | dbcli |
+|---------|:---------:|:-----:|:----:|:-----:|
+| Natural language to SQL | Yes | | | |
+| Self-healing queries | Yes | | | |
+| AI query explanation | Yes | | | |
+| Local LLM support | Yes | | | |
+| Safe mode | Yes | | | |
+| Multi-database | Yes | | Yes | |
+| SQL syntax highlighting | Yes | Yes | Yes | Yes |
+| Query history | Yes | Yes | Yes | Yes |
+| CSV export | Yes | Yes | | Yes |
 
 ## Features
 
-- **Natural language to SQL** â powered by OpenAI / local LLM support
-- **TTL-aware query cache** â repeated questions skip the LLM entirely
-- **Interactive REPL** â run queries in a live session with history
-- **Multiple DB backends** â PostgreSQL, MySQL, SQLite
-- **Query explanation mode** â understand what a query does before you run it
-- **Safe mode** â flags destructive queries (DROP, DELETE, TRUNCATE) before executing
-- **Export results** â to CSV, JSON, or pretty-printed table
+**AI-Native**
+- Natural language to SQL generation via Anthropic Claude, OpenAI, or local Ollama models
+- Self-healing queries: auto-detects errors, rewrites, and retries
+- `:explain` command: get a plain-English breakdown of any SQL query
+- Conversational context: follow-up questions reference previous results
 
----
+**Database Support**
+- PostgreSQL, MySQL, and SQLite via sqlx
+- Schema browser with table/column introspection and row counts
+- Connection pooling with health checks and acquire timeouts
+
+**Terminal UI**
+- Four-panel layout: Schema, AI Chat, SQL Preview, Results
+- SQL syntax highlighting with tokenizer (80+ keywords, 35+ functions, 20+ data types)
+- Persistent query history with up/down navigation and fuzzy recall
+- TTL-aware LRU query cache with atomic persistence
+- CSV export with Ctrl+E
+- Safe mode blocks destructive queries (INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE)
+
+**Configurable**
+- AI model selection via config.toml, environment variables, or `--model` CLI flag
+- Works fully offline with Ollama (codellama, mistral, deepseek-coder, or any local model)
+- Keybinding-driven workflow designed for speed
 
 ## Installation
 
-```bash
-cargo install querywise
-```
-
-Or build from source:
+**From source**
 
 ```bash
 git clone https://github.com/rohitgs28/querywise
 cd querywise
 cargo build --release
-./target/release/querywise --help
 ```
 
----
+The binary will be at `./target/release/querywise`.
 
 ## Quick Start
 
 ```bash
-# Connect to a database
-querywise connect postgres://localhost/mydb
+# Connect to SQLite
+querywise -f ./data.db
 
-# Ask a question
-querywise "how many orders were placed today?"
+# Connect to PostgreSQL
+querywise -u postgres://user:pass@localhost/mydb
 
-# Start interactive REPL
-querywise repl
+# Connect to MySQL
+querywise -u mysql://user:pass@localhost/mydb
 
-# Explain a query without running it
-querywise explain "delete all inactive users"
+# Use a local Ollama model instead of cloud AI
+querywise -f ./data.db --ai-provider ollama --model codellama
+
+# Run a single query and exit
+querywise -f ./data.db -e "SELECT count(*) FROM users"
 ```
-
----
 
 ## Keybindings
 
 | Key | Action |
 |-----|--------|
 | `Enter` | Run query or natural language question |
-| `↑` / `↓` | Navigate query history |
-| `Tab` | Cycle between panels (Schema → Chat → SQL → Results) |
-| `F1`–`F4` | Jump to panel directly |
-| `Ctrl+S` | Toggle safe mode (blocks destructive queries) |
+| `Up` / `Down` | Navigate query history |
+| `Tab` | Cycle panels: Schema, Chat, SQL Preview, Results |
+| `F1` `F2` `F3` `F4` | Jump directly to a panel |
+| `Ctrl+S` | Toggle safe mode |
 | `Ctrl+E` | Export results to CSV |
 | `Ctrl+L` | Clear chat and conversation context |
 | `Ctrl+Q` | Quit |
-| `:explain <query>` | Get AI explanation of a SQL query |
+| `:explain <query>` | Get AI explanation of SQL |
 | `:explain` | Explain the last generated query |
-
----
 
 ## Architecture
 
 ```
-User Input (natural language)
-        â
-        â¼
-   Query Cache ââââ HIT âââ¶ Return cached result
-        â MISS
-        â¼
-   AI Layer (OpenAI / local LLM)
-        â
-        â¼
-   SQL Query (validated)
-        â
-        â¼
-   DB Executor (postgres / mysql / sqlite)
-        â
-        â¼
-   Result Formatter (table / json / csv)
+User Input (natural language or SQL)
+│
+├─ :explain ─────→ AI Agent ───→ Plain-English explanation
+│
+├─ SQL detected ──→ Safe mode check ──→ Execute
+│
+└─ Natural language ─→ AI Agent ──────────→ Generate SQL
+                                              │
+                                    Safe mode check
+                                              │
+                                         Execute query
+                                              │
+                                  ┌─────────┴─────────┐
+                                  │                   │
+                               Success             Failure
+                                  │                   │
+                            Show results       Auto-fix query
+                            Save to history    Retry execution
 ```
 
----
+```
+src/
+├── main.rs              # CLI: -u, -f, -e, --ai-provider, --model
+├── app.rs               # Event loop, input handling, query orchestration
+├── config/mod.rs        # TOML config (~/.config/querywise/config.toml)
+├── ai/
+│   ├── agent.rs         # generate_sql(), fix_query(), explain_query()
+│   └── provider.rs      # Anthropic / OpenAI / Ollama with timeouts
+├── db/
+│   ├── connection.rs    # Connect, execute, introspect (Postgres/MySQL/SQLite)
+│   ├── schema.rs        # SchemaInfo, TableInfo, ColumnInfo
+│   ├── history.rs       # Persistent query history (JSON, dedup, 1000 cap)
+│   └── query_cache.rs   # TTL LRU cache with atomic save
+└── ui/
+    ├── renderer.rs      # 4-panel ratatui layout
+    └── components/
+        └── sql_highlight.rs  # SQL tokenizer and syntax highlighting
+```
 
 ## Configuration
 
+QueryWise reads from `~/.config/querywise/config.toml`:
+
 ```toml
-# querywise.toml
-[database]
-url = "postgres://localhost/mydb"
+# AI provider settings
+anthropic_api_key = "sk-ant-..."
+# openai_api_key = "sk-..."
 
-[ai]
-provider = "openai"       # or "ollama" for local
-model = "gpt-4o-mini"
-api_key_env = "OPENAI_API_KEY"
+# Local LLM via Ollama (no API key needed)
+# ollama_url = "http://localhost:11434"
+# ollama_model = "codellama"
 
-[cache]
-enabled = true
-ttl_secs = 300
-max_entries = 500
+# default_ai_provider = "anthropic"  # or "openai" or "ollama"
 ```
 
----
+Environment variables also work: `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OLLAMA_MODEL`.
 
 ## Contributing
 
-PRs welcome! Check out the open issues for good first contributions.
+Contributions welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions.
 
 ```bash
-cargo test        # run all tests
+cargo test        # run tests (25+ unit tests)
 cargo clippy      # lint
-cargo fmt         # format
+cargo fmt --check # format check
 ```
 
----
+Areas where help is needed:
+- Tab completion for table and column names
+- Multi-line query editor
+- Vim keybindings mode
+- Additional database backends
+- Demo GIF for this README
+
+See [ROADMAP.md](ROADMAP.md) for the full plan.
+
+## Built With
+
+- [Rust](https://www.rust-lang.org/) for performance and safety
+- [Ratatui](https://ratatui.rs/) for the terminal UI
+- [sqlx](https://github.com/launchbadge/sqlx) for async database access
+- [Tokio](https://tokio.rs/) for the async runtime
+- [clap](https://github.com/clap-rs/clap) for CLI argument parsing
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE) for details.
