@@ -1,5 +1,7 @@
 use ratatui::{prelude::*, widgets::*};
+
 use crate::app::{App, Panel};
+use crate::ui::components::sql_highlight::{highlight_sql, highlight_sql_with_prefix};
 
 pub fn render(frame: &mut Frame, app: &App) {
     let outer = Layout::default()
@@ -132,18 +134,30 @@ fn render_chat_panel(frame: &mut Frame, app: &App, area: Rect) {
         .chat_messages
         .iter()
         .map(|m| {
-            let (prefix, style) = match m.role.as_str() {
-                "user" => ("> ", Style::default().fg(Color::White).bold()),
-                "sql" => ("  SQL: ", Style::default().fg(Color::Green)),
-                "result" => ("  ✓ ", Style::default().fg(Color::Cyan)),
-                "error" => ("  ERR: ", Style::default().fg(Color::Red)),
-                "info" => ("  ℹ ", Style::default().fg(Color::Yellow)),
-                _ => ("  ", Style::default()),
+            let line = match m.role.as_str() {
+                "user" => Line::from(Span::styled(
+                    format!("> {}", m.content),
+                    Style::default().fg(Color::White).bold(),
+                )),
+                "sql" => highlight_sql_with_prefix(" SQL: ", &m.content),
+                "result" => Line::from(Span::styled(
+                    format!(" \u{2713} {}", m.content),
+                    Style::default().fg(Color::Cyan),
+                )),
+                "error" => Line::from(Span::styled(
+                    format!(" ERR: {}", m.content),
+                    Style::default().fg(Color::Red),
+                )),
+                "info" => Line::from(Span::styled(
+                    format!(" \u{2139} {}", m.content),
+                    Style::default().fg(Color::Yellow),
+                )),
+                _ => Line::from(Span::styled(
+                    format!(" {}", m.content),
+                    Style::default(),
+                )),
             };
-            ListItem::new(Line::from(Span::styled(
-                format!("{}{}", prefix, m.content),
-                style,
-            )))
+            ListItem::new(line)
         })
         .collect();
 
@@ -159,10 +173,11 @@ fn render_chat_panel(frame: &mut Frame, app: &App, area: Rect) {
 
     // Input title changes when navigating history
     let input_title = if app.query_history.is_navigating() {
-        " History (↑↓ navigate, Enter to run) "
+        " History (\u{2191}\u{2193} navigate, Enter to run) "
     } else {
         " Ask a question, enter SQL, or :explain "
     };
+
     let input_border = if active {
         if app.query_history.is_navigating() {
             Style::default().fg(Color::Yellow)
@@ -198,21 +213,23 @@ fn render_sql_panel(frame: &mut Frame, app: &App, area: Rect) {
         Style::default().fg(Color::DarkGray)
     };
 
-    let sql = if app.generated_sql.is_empty() {
-        "No query generated yet".to_string()
+    let sql_content = if app.generated_sql.is_empty() {
+        Line::from(Span::styled(
+            "No query generated yet",
+            Style::default().fg(Color::DarkGray),
+        ))
     } else {
-        app.generated_sql.clone()
+        highlight_sql(&app.generated_sql)
     };
 
     frame.render_widget(
-        Paragraph::new(sql)
+        Paragraph::new(sql_content)
             .block(
                 Block::default()
                     .title(" SQL [F3] ")
                     .borders(Borders::ALL)
                     .border_style(border),
             )
-            .style(Style::default().fg(Color::Green))
             .wrap(Wrap { trim: false }),
         area,
     );
@@ -337,7 +354,7 @@ fn render_key_hints(frame: &mut Frame, app: &App, area: Rect) {
         Line::from(vec![
             Span::styled(" Tab", Style::default().fg(Color::Cyan).bold()),
             Span::styled(" Switch ", Style::default().fg(Color::DarkGray)),
-            Span::styled(" ↑↓", Style::default().fg(Color::Cyan).bold()),
+            Span::styled(" \u{2191}\u{2193}", Style::default().fg(Color::Cyan).bold()),
             Span::styled(" Scroll ", Style::default().fg(Color::DarkGray)),
             Span::styled(" Ctrl+E", Style::default().fg(Color::Cyan).bold()),
             Span::styled(" Export ", Style::default().fg(Color::DarkGray)),
@@ -352,7 +369,7 @@ fn render_key_hints(frame: &mut Frame, app: &App, area: Rect) {
             Span::styled(" Switch ", Style::default().fg(Color::DarkGray)),
             Span::styled(" Enter", Style::default().fg(Color::Cyan).bold()),
             Span::styled(" Run ", Style::default().fg(Color::DarkGray)),
-            Span::styled(" ↑↓", Style::default().fg(Color::Cyan).bold()),
+            Span::styled(" \u{2191}\u{2193}", Style::default().fg(Color::Cyan).bold()),
             Span::styled(" History ", Style::default().fg(Color::DarkGray)),
             Span::styled(" Ctrl+S", Style::default().fg(Color::Cyan).bold()),
             Span::styled(" Safe ", Style::default().fg(Color::DarkGray)),
