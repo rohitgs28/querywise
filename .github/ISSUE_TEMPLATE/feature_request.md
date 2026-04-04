@@ -1,19 +1,24 @@
 ---
 name: Feature Request
-about: Suggest an idea for QueryWise
-title: "[feat] "
+about: Suggest a new feature for QueryWise
+title: ''
 labels: enhancement
 assignees: ''
 ---
 
-**Problem**
-What problem does this solve? What friction are you experiencing?
+**What problem does this solve?**
+Describe what you're trying to do that QueryWise doesn't support.
 
 **Proposed solution**
-Describe what you want to happen.
+How would this work? What would the UX look like?
+
+```
+> example user input
+QueryWise: example output
+```
 
 **Alternatives considered**
-Other approaches you have thought about.
+What else have you tried or considered?
 
-**Additional context**
-Mockups, examples from other tools, or anything else.
+**Which database(s)?**
+Does this apply to all databases or specific ones? (PostgreSQL / MySQL / SQLite)

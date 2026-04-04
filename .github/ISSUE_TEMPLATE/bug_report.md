@@ -1,27 +1,35 @@
 ---
 name: Bug Report
-about: Report a bug to help us improve QueryWise
-title: "[bug] "
+about: Report a bug in QueryWise
+title: ''
 labels: bug
 assignees: ''
 ---
 
-**Describe the bug**
-A clear description of what the bug is.
+**What happened?**
+A clear description of the bug.
 
-**To reproduce**
-1. Connect to database with '...'
-2. Type '...'
-3. See error
+**What did you expect?**
+What should have happened instead.
 
-**Expected behavior**
-What you expected to happen.
+**How to reproduce**
+1. Database type: (PostgreSQL / MySQL / SQLite)
+2. AI provider: (Anthropic / OpenAI / Ollama / none)
+3. Query or action that triggered the bug:
+```
+> your input here
+```
+4. Error message or unexpected output:
+```
+paste output here
+```
 
 **Environment**
-- OS: [e.g. macOS 14, Ubuntu 24.04, Windows 11]
-- Database: [e.g. PostgreSQL 16, SQLite 3.45, MySQL 8]
-- AI Provider: [e.g. Anthropic, OpenAI, Ollama]
-- QueryWise version: [e.g. 0.1.0]
+- QueryWise version:
+- OS:
+- Rust version:
+- Terminal emulator:
+- Database version:
 
-**Additional context**
-Any error messages, screenshots, or logs.
+**Screenshots**
+If the bug is visual (TUI rendering), paste a screenshot.
