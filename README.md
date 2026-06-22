@@ -67,7 +67,7 @@ Every other terminal database client assumes you already know SQL. QueryWise doe
 - **7 built-in color themes**: dark, light, dracula, nord, monokai, solarized-dark, solarized-light
 - Custom themes via config.toml with hex color overrides
 - Persistent query history with up/down navigation
-- **Query bookmarks** — save and recall favorite queries with Ctrl+B
+- **Query bookmarks** - save and recall favorite queries with Ctrl+B
 - TTL-aware LRU query cache with atomic persistence
 - CSV export with Ctrl+E
 - Safe mode blocks destructive queries
@@ -246,11 +246,11 @@ Areas where help is needed: tab completion, multi-line editor, vim keybindings, 
 
 ## Built With
 
-- [Rust](https://www.rust-lang.org/) — performance and safety
-- [Ratatui](https://ratatui.rs/) — terminal UI
-- [sqlx](https://github.com/launchbadge/sqlx) — async database access
-- [Tokio](https://tokio.rs/) — async runtime
-- [clap](https://github.com/clap-rs/clap) — CLI argument parsing
+- [Rust](https://www.rust-lang.org/) - performance and safety
+- [Ratatui](https://ratatui.rs/) - terminal UI
+- [sqlx](https://github.com/launchbadge/sqlx) - async database access
+- [Tokio](https://tokio.rs/) - async runtime
+- [clap](https://github.com/clap-rs/clap) - CLI argument parsing
 
 ## License
 
